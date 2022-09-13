@@ -243,6 +243,26 @@ local titles = {
   [methods[3]] = icons.ref .. 'References ',
 }
 
+function Finder:get_lines(path, start_line, end_line)
+  path = string.gsub(path, '^file://', '', 1)
+  local content = {}
+  local f = io.open(path, "r")
+  if f == nil then
+    return content
+  end
+
+
+  local i = 0
+  for line in f:lines() do
+    if i >= start_line and i < end_line then
+      table.insert(content, line)
+    end
+    i = i + 1
+  end
+  f:close()
+  return content
+end
+
 function Finder:create_finder_contents(result, method)
   local contents = {}
 
@@ -260,10 +280,6 @@ function Finder:create_finder_contents(result, method)
     if uri == nil then
       vim.notify('miss uri in server response')
       return
-    end
-    local bufnr = vim.uri_to_bufnr(uri)
-    if not api.nvim_buf_is_loaded(bufnr) then
-      fn.bufload(bufnr)
     end
     local link = vim.uri_to_fname(uri) -- returns lowercase drive letters on Windows
     if libs.is_windows() then
@@ -284,12 +300,7 @@ function Finder:create_finder_contents(result, method)
     local target_line = indent .. self.f_icon .. short_name
 
     local range = res.targetRange or res.range
-    local lines = api.nvim_buf_get_lines(
-      bufnr,
-      range.start.line - 0,
-      range['end'].line + 1 + config.max_preview_lines,
-      false
-    )
+    local lines = self:get_lines(uri, range.start.line - 0, range['end'].line + 1 + config.max_preview_lines)
 
     local link_with_preview = {
       link = link,
